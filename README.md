@@ -3,7 +3,7 @@ A selection of AI systems built in collaboration with artists for exhibits and p
 
 ## Instructions
 Get the repo:
-`git clone git@github.com:seraphinatarrant/ai_as_art.git`
+`git clone https://github.com/seraphinatarrant/ai_as_art.git`
 then `cd ai_as_art`
 
 For each different project, make an environment with:
