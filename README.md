@@ -7,7 +7,7 @@ Get the repo:
 then `cd ai_as_art`
 
 For each different project, make an environment with:
-`conda create -n MYENVNAME`
+`conda create -n MYENVNAME python=3.7`
 
 Once it is created, activate it to install everything:
 `conda activate MYENVNAME`
