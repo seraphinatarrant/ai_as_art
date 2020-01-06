@@ -3,8 +3,8 @@ import argparse
 import torch
 import torchvision.utils as vutils
 
-from image_generation.utils import Generator, weights_init
-from image_generation.utils import read_yaml_config
+from utils.gan_utils import Generator
+from utils.general_utils import read_yaml_config
 
 
 def setup_argparse():
@@ -24,7 +24,6 @@ if __name__ == "__main__":
     print("Loading Model...")
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     netG = Generator(ngpu, nc, nz, ngf).to(device)
-    netG.apply(weights_init)
     if not ngpu:
         netG.load_state_dict(torch.load(generator, map_location = torch.device('cpu')))
     else:

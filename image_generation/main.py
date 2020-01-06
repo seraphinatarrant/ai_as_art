@@ -12,7 +12,7 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 
-from image_generation.utils import weights_init, Generator, Discriminator
+from utils.gan_utils import weights_init, Generator, Discriminator
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True, help='cifar10 | lsun | mnist |imagenet | folder | lfw | fake')
