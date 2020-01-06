@@ -1,0 +1,10 @@
+# Change these to change locations of output files, and number of samples to generate
+output_dir: sample_outputs/
+num_samples: 15
+
+# These are fixed based on the model being loaded in
+generator: models/netG_epoch_88.pth
+ngpu: 0 # num gpus available, 0 if none
+nc: 3 # num colour channels
+nz: 100 # dimensions of Z vector for initialising image gen
+ngf: 64 # dimensions of generator
