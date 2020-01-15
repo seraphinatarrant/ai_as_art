@@ -107,7 +107,7 @@ ngf = int(opt.ngf)
 ndf = int(opt.ndf)
 
 
-netG = Generator(ngpu, nc, nz, ngf).to(device)
+netG = Generator(ngpu, nc, nz, ngf, img_sz=opt.imageSize).to(device)
 netG.apply(weights_init)
 
 if opt.netG != '':
@@ -115,7 +115,7 @@ if opt.netG != '':
 print(netG)
 
 
-netD = Discriminator(ngpu, nc, ndf).to(device)
+netD = Discriminator(ngpu, nc, ndf, img_sz=opt.imageSize).to(device)
 netD.apply(weights_init)
 if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))

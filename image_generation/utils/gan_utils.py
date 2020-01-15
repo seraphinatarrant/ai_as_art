@@ -1,3 +1,4 @@
+from math import log2
 import torch.nn as nn
 
 
@@ -12,35 +13,35 @@ def weights_init(m):
 
 
 class Generator(nn.Module):
-    def __init__(self, ngpu, nc, nz, ngf):  # GPUs, num colors (2 or 3), dim of Z init vector, dim of generator
+    def __init__(self, ngpu, nc, nz, ngf, img_sz=128):  # GPUs, num colors (2 or 3), dim of Z init vector, dim of generator
         super(Generator, self).__init__()
         self.ngpu = ngpu
-        self.main = nn.Sequential(
-            # input is Z, going into a convolution
-            nn.ConvTranspose2d(     nz, ngf * 16, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf * 16),
-            nn.ReLU(True),
-            # state size. (ngf*16) x 4 x 4
-            nn.ConvTranspose2d(ngf * 16, ngf * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 8),
-            nn.ReLU(True),
-            # state size. (ngf*8) x 8 x 8
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 4),
-            nn.ReLU(True),
-            # state size. (ngf*4) x 16 x 16
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 2),
-            nn.ReLU(True),
-            # state size. (ngf*2) x 32 x 32
-            nn.ConvTranspose2d(ngf * 2,     ngf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
-            # state size. (ngf) x 64 x 64
-            nn.ConvTranspose2d(    ngf,      nc, 4, 2, 1, bias=False),
-            nn.Tanh()
-            # state size. (nc) x 128 x 128
-        )
+        self.nc = nc
+        self.ngf = ngf
+        self.nz = nz
+        self.img_sz = img_sz
+        self._init_main()
+
+    def _init_main(self):
+        # one less layer than powers of 2 of the image size, and first and last layer are different. Reverse of the discriminator (since it's output is disc input)
+        num_extra_convolutions = int(log2(self.img_sz)) - 2
+        conv_seq = []
+        for conv_layer in range(num_extra_convolutions, -1, -1):
+            if conv_layer == num_extra_convolutions:  # first layer takes noise vector z
+                conv_seq.extend([nn.ConvTranspose2d(self.nz, self.ngf * pow(2, conv_layer-1), 4, 1, 0, bias=False),
+                                 nn.BatchNorm2d(self.ngf * pow(2, conv_layer-1)),
+                                 nn.ReLU(True)])
+            elif conv_layer == 0: # last layer goes to colour channels and has Tanh
+                conv_seq.extend([nn.ConvTranspose2d(self.ngf, self.nc, 4, 2, 1, bias=False),
+                                nn.Tanh()])
+            else:
+                conv_seq.extend([nn.ConvTranspose2d(self.ngf * pow(2, conv_layer),
+                                                    self.ngf * pow(2, conv_layer-1), 4, 2, 1, bias=False),
+                                 nn.BatchNorm2d(self.ngf * pow(2, conv_layer-1)),
+                                 nn.ReLU(True)])
+
+        self.main = nn.Sequential(*conv_seq)
+
 
     def forward(self, input):
         if input.is_cuda and self.ngpu > 1:
@@ -51,34 +52,33 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, ngpu, nc, ndf): # GPUs, num colors (2 or 3), dim of discriminator
+    def __init__(self, ngpu, nc, ndf, img_sz=128): # GPUs, num colors (2 or 3), dim of discriminator
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
-        self.main = nn.Sequential(
-            # input is (nc) x 128 x 128
-            nn.Conv2d(nc, ndf, 4, stride=2, padding=1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 64 x 64
-            nn.Conv2d(ndf, ndf * 2, 4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ndf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 32 x 32
-            nn.Conv2d(ndf * 2, ndf * 4, 4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ndf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 16 x 16
-            nn.Conv2d(ndf * 4, ndf * 8, 4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ndf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 8 x 8
-            nn.Conv2d(ndf * 8, ndf * 16, 4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ndf * 16),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*16) x 4 x 4
-            nn.Conv2d(ndf * 16, 1, 4, stride=1, padding=0, bias=False),
-            nn.Sigmoid()
-            # state size. 1
-        )
+        self.nc = nc
+        self.ndf = ndf
+        self.img_sz = img_sz
+        self._init_main()
+
+    def _init_main(self):
+        # one less layer than powers of 2 of the image size, and first and last layer are different
+        num_extra_convolutions = int(log2(self.img_sz)) - 2
+        # init first one as not dependent on sequence
+        conv_seq = [nn.Conv2d(self.nc, self.ndf, 4, stride=2, padding=1, bias=False),
+                    nn.LeakyReLU(0.2, inplace=True)]  # first layer takes num color channels and has no batch norm
+
+        for conv_layer in range(num_extra_convolutions):
+            if conv_layer == num_extra_convolutions - 1:  # last layer has just a conv and a sigmoid
+                conv_seq.extend([nn.Conv2d(self.ndf * pow(2, conv_layer), 1, 4, stride=1, padding=0, bias=False),
+                                 nn.Sigmoid()])
+            else:
+                conv_seq.extend([nn.Conv2d(self.ndf * pow(2, conv_layer), self.ndf * pow(2, conv_layer + 1), 4, stride=2, padding=1, bias=False),
+                                 nn.BatchNorm2d(self.ndf * pow(2, conv_layer + 1)),
+                                 nn.LeakyReLU(0.2, inplace=True)])
+        self.main = nn.Sequential(*conv_seq)
+
+
+
 
     def forward(self, input):
         if input.is_cuda and self.ngpu > 1:
