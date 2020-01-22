@@ -128,7 +128,7 @@ criterion = nn.BCELoss()
 fixed_noise = torch.randn(opt.batchSize, nz, 1, 1, device=device)
 real_label = 1
 fake_label = 0
-num_flipped_labels = opt.batchSize * opt.disc_noise
+num_flipped_labels = int(opt.batchSize * opt.disc_noise)
 
 # setup optimizer
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -146,9 +146,8 @@ for epoch in range(opt.niter):
         label = torch.full((batch_size,), real_label, device=device)
 
         # flip some indices for the discriminator labels
-        for idx in random.sample(range(opt.batchSize), num_flipped_labels):
+        for idx in random.sample(range(batch_size), num_flipped_labels):
             label[idx] = fake_label
-        print(label, file=sys.stderr)
 
         output = netD(real_cpu)
         errD_real = criterion(output, label)
