@@ -143,7 +143,7 @@ for epoch in range(opt.niter):
         netD.zero_grad()
         real_cpu = data[0].to(device)
         batch_size = real_cpu.size(0)
-        label = torch.full((batch_size,), real_label, device=device)
+        label = torch.full((opt.batchSize,), real_label, device=device)
 
         # flip some indices for the discriminator labels
         for idx in random.sample(range(batch_size), num_flipped_labels):
