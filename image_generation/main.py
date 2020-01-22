@@ -4,6 +4,7 @@ import argparse
 import os
 import random
 
+import sys
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim as optim
@@ -33,6 +34,7 @@ parser.add_argument('--netD', default='', help="path to netD (to continue traini
 parser.add_argument('--outf', default='.', help='folder to output images and model checkpoints')
 parser.add_argument('--manualSeed', type=int, help='manual seed')
 parser.add_argument('--classes', default='bedroom', help='comma separated list of classes for the lsun data set')
+parser.add_argument('--disc_noise', type=float, default=0.1, help='percentage of labels to flip for the discriminator')
 
 opt = parser.parse_args()
 print(opt)
@@ -126,6 +128,7 @@ criterion = nn.BCELoss()
 fixed_noise = torch.randn(opt.batchSize, nz, 1, 1, device=device)
 real_label = 1
 fake_label = 0
+num_flipped_labels = opt.batchSize * opt.disc_noise
 
 # setup optimizer
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -141,6 +144,11 @@ for epoch in range(opt.niter):
         real_cpu = data[0].to(device)
         batch_size = real_cpu.size(0)
         label = torch.full((batch_size,), real_label, device=device)
+
+        # flip some indices for the discriminator labels
+        for idx in random.sample(range(batch_size), num_flipped_labels):
+            label[idx] = fake_label
+        print(label, file=sys.stderr)
 
         output = netD(real_cpu)
         errD_real = criterion(output, label)
