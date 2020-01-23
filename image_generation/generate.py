@@ -9,7 +9,7 @@ from utils.general_utils import read_yaml_config
 
 def setup_argparse():
     p = argparse.ArgumentParser()
-    p.add_argument('-c', dest='config_file', default='config/gan_e88.yaml',
+    p.add_argument('-c', dest='config_file', default='config/128_res.yaml',
                    help='a yaml config containing necessary information to load and run generation')
     return p.parse_args()
 
